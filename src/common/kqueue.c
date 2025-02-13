@@ -354,9 +354,10 @@ int VISIBLE
 kqueue(void)
 {
     struct kqueue *kq;
+    int i;
 
 #ifdef _WIN32
-    if (InterlockedCompareExchange(&kq_init_begin, 0, 1) == 0) {
+    if (InterlockedCompareExchange(&kq_init_begin, 1, 0) == 0) {
         libkqueue_init();
     } else {
         while (kq_init_complete == 0) {
@@ -404,7 +405,13 @@ kqueue(void)
 
     dbg_printf("kq=%p - alloced with fd=%d", kq, kq->kq_id);
 
-    kqueue_free_by_id(kq->kq_id);   /* Free any old map entries */
+    /* Find a free kq id */
+    for (i = 0; i < get_fd_limit (); i++) {
+        if (!kqueue_lookup (i)) {
+            kq->kq_id = i;
+            break;
+        }
+    }
 
     if (map_insert(kqmap, kq->kq_id, kq) < 0) {
         dbg_printf("kq=%p - map insertion failed, freeing", kq);
