@@ -32,7 +32,6 @@ static __thread struct event_buf iocp_buf;
 const struct filter evfilt_proc = EVFILT_NOTIMPL;
 const struct filter evfilt_vnode = EVFILT_NOTIMPL;
 const struct filter evfilt_signal = EVFILT_NOTIMPL;
-const struct filter evfilt_write = EVFILT_NOTIMPL;
 
 const struct kqueue_vtable kqops = {
     .kqueue_init        = windows_kqueue_init,
@@ -142,8 +141,7 @@ windows_kevent_copyout(struct kqueue *kq, int nready,
     rv = filt->kf_copyout(eventlist, nevents, filt, kn, &iocp_buf);
     if (unlikely(rv < 0)) {
         dbg_puts("knote_copyout failed");
-        /* XXX-FIXME: hard to handle this without losing events */
-        abort();
+        return 0;
     } else {
         nret = 1;
     }
