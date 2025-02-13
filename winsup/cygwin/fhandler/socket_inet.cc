@@ -882,11 +882,13 @@ fhandler_socket_inet::accept4 (struct sockaddr *peer, int *len, int flags)
     }
 
   SOCKET res = INVALID_SOCKET;
-  while (!(res = wait_for_events (FD_ACCEPT | FD_CLOSE, 0))
-	 && (res = ::accept (get_socket (), (struct sockaddr *) &lpeer, &llen))
-	    == INVALID_SOCKET
-	 && WSAGetLastError () == WSAEWOULDBLOCK)
-    ;
+  for (;;)
+    {
+      int r = wait_for_events (FD_ACCEPT | FD_CLOSE, 0);
+      res = ::accept (get_socket (), (struct sockaddr *) &lpeer, &llen);
+      if (r || res != INVALID_SOCKET || WSAGetLastError () != WSAEWOULDBLOCK)
+        break;
+    }
   if (res == INVALID_SOCKET)
     set_winsock_errno ();
   else
@@ -1157,9 +1159,9 @@ fhandler_socket_inet::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
   /* Note: Don't call WSARecvFrom(MSG_PEEK) without actually having data
      waiting in the buffers, otherwise the event handling gets messed up
      for some reason. */
-  while (!(res = wait_for_events (evt_mask | FD_CLOSE, wait_flags))
-	 || saw_shutdown_read ())
+  for (;;)
     {
+      int r = wait_for_events (evt_mask | FD_CLOSE, wait_flags);
       DWORD dwFlags = wsamsg->dwFlags | (read_oob ? MSG_OOB : 0);
       if (use_recvmsg)
 	res = WSARecvMsg (get_socket (), wsamsg, &wret, NULL, NULL);
@@ -1211,7 +1213,7 @@ fhandler_socket_inet::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
 	  if (!wsacnt)
 	    break;
 	}
-      else if (WSAGetLastError () != WSAEWOULDBLOCK)
+      else if (r || WSAGetLastError () != WSAEWOULDBLOCK)
 	break;
     }
 
