@@ -110,9 +110,11 @@ windows_kevent_wait(struct kqueue *kq, int no, const struct timespec *timeout)
         dbg_puts("Woop, not waiting !?");
 #endif
     memset(&iocp_buf, 0, sizeof(iocp_buf));
+    kqueue_unlock(kq);
     success = GetQueuedCompletionStatus(kq->kq_iocp,
             &iocp_buf.bytes, &iocp_buf.key, &iocp_buf.overlap,
             timeout_ms);
+    kqueue_lock(kq);
     if (success) {
         return (1);
     } else {
