@@ -1791,8 +1791,6 @@ fhandler_socket_inet::setsockopt (int level, int optname, const void *optval,
 	      set_errno (EINVAL);
 	      return ret;
 	    }
-	  if (get_socket_type () == SOCK_STREAM)
-	    ignore = true;
 	  break;
 
 	case SO_RCVTIMEO:
